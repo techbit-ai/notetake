@@ -1,0 +1,67 @@
+{
+  "entities": {
+    "Note": {
+      "title": "Note",
+      "description": "A micro-reading snippet with AI-structured metadata.",
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string",
+          "description": "The original text snippet or note."
+        },
+        "structuredData": {
+          "type": "object",
+          "description": "AI-generated structure (tags, summary, action items)."
+        },
+        "userId": {
+          "type": "string",
+          "description": "The ID of the user who created the note."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp of creation."
+        },
+        "source": {
+          "type": "string",
+          "description": "Optional source URL or book title."
+        },
+        "embedding": {
+          "type": "array",
+          "items": { "type": "number" },
+          "description": "Vector embedding for semantic search."
+        }
+      },
+      "required": ["content", "userId", "createdAt"]
+    },
+    "User": {
+      "title": "User",
+      "description": "User profile and preferences.",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "format": "email"
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["user", "admin"]
+        }
+      },
+      "required": ["email"]
+    }
+  },
+  "firestore": {
+    "/notes/{noteId}": {
+      "schema": "Note",
+      "description": "Collection of user notes."
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles."
+    }
+  }
+}

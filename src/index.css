@@ -1,0 +1,69 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Cormorant Garamond", serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --color-lumina-bg: var(--bg);
+  --color-lumina-surface: var(--surface);
+  --color-lumina-text: var(--text);
+  --color-lumina-accent: var(--accent);
+  --color-lumina-border: var(--border);
+
+  @keyframes shimmer {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(100%); }
+  }
+  --animate-shimmer: shimmer 2s infinite;
+}
+
+:root {
+  --bg: #F8F9FA;
+  --surface: #FFFFFF;
+  --text: #1A1A1A;
+  --text-muted: #666666;
+  --accent: #6366F1; /* Vibrant Indigo */
+  --accent-secondary: #EC4899; /* Vibrant Pink */
+  --border: rgba(0, 0, 0, 0.06);
+}
+
+.dark {
+  --bg: #0B0B0F;
+  --surface: #16161E;
+  --text: #F8F9FA;
+  --text-muted: #94A3B8;
+  --accent: #818CF8; /* Lighter Indigo for dark mode */
+  --accent-secondary: #F472B6; /* Lighter Pink for dark mode */
+  --border: rgba(255, 255, 255, 0.08);
+}
+
+@layer base {
+  body {
+    @apply antialiased text-lumina-text bg-lumina-bg transition-colors duration-300;
+  }
+}
+
+@layer utilities {
+  .bg-grid-pattern {
+    background-image: radial-gradient(var(--border) 1.5px, transparent 1.5px);
+    background-size: 32px 32px;
+  }
+  
+  .animate-blob {
+    animation: blob 7s infinite;
+  }
+  
+  @keyframes blob {
+    0% { transform: translate(0px, 0px) scale(1); }
+    33% { transform: translate(30px, -50px) scale(1.1); }
+    66% { transform: translate(-20px, 20px) scale(0.9); }
+    100% { transform: translate(0px, 0px) scale(1); }
+  }
+}
+
+.markdown-body {
+  @apply prose prose-indigo dark:prose-invert max-w-none;
+}
