@@ -6,64 +6,42 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-async function startServer() {
-  const app = express();
-  const PORT = 3000;
+const app = express();
+const PORT = 3000;
 
-  app.use(express.json());
+app.use(express.json());
 
-  // Gemini API Route for Content Generation
-  app.post("/api/generate", async (req, res) => {
-    try {
-      const { contents, config, model } = req.body;
-      const apiKey = process.env.GEMINI_API_KEY;
+// Gemini API Route
+app.post("/api/gemini", async (req, res) => {
+  try {
+    const { action, payload } = req.body;
+    const apiKey = process.env.GEMINI_API_KEY;
 
-      if (!apiKey || apiKey === "MY_GEMINI_API_KEY") {
-        return res.status(400).json({ 
-          error: "Gemini API Key is missing or invalid. Please add GEMINI_API_KEY to your Secrets." 
-        });
-      }
-
-      const ai = new GoogleGenAI({ apiKey });
-      const response = await ai.models.generateContent({
-        model: model || "gemini-3-flash-preview",
-        contents,
-        config
-      });
-
-      res.json(response);
-    } catch (error: any) {
-      console.error("Gemini API Error:", error);
-      res.status(500).json({ error: error.message || "Internal Server Error" });
+    if (!apiKey) {
+      return res.status(500).json({ error: "GEMINI_API_KEY is not set on the server." });
     }
-  });
 
-  // Gemini API Route for Embeddings
-  app.post("/api/embed", async (req, res) => {
-    try {
-      const { contents, model } = req.body;
-      const apiKey = process.env.GEMINI_API_KEY;
+    const ai = new GoogleGenAI({ apiKey });
+    let result;
 
-      if (!apiKey || apiKey === "MY_GEMINI_API_KEY") {
-        return res.status(400).json({ 
-          error: "Gemini API Key is missing or invalid. Please add GEMINI_API_KEY to your Secrets." 
-        });
-      }
-
-      const ai = new GoogleGenAI({ apiKey });
-      const response = await ai.models.embedContent({
-        model: model || "gemini-embedding-2-preview",
-        contents
-      });
-
-      res.json(response);
-    } catch (error: any) {
-      console.error("Gemini Embedding Error:", error);
-      res.status(500).json({ error: error.message || "Internal Server Error" });
+    switch (action) {
+      case 'generateContent':
+        result = await ai.models.generateContent(payload);
+        return res.json(result);
+      case 'embedContent':
+        result = await ai.models.embedContent(payload);
+        return res.json(result);
+      default:
+        return res.status(400).json({ error: "Invalid action" });
     }
-  });
+  } catch (error: any) {
+    console.error("Gemini Server Error:", error);
+    res.status(500).json({ error: error.message || "Internal Server Error" });
+  }
+});
 
-  // Vite middleware for development
+// Vite middleware for development
+async function setupVite() {
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
       server: { middlewareMode: true },
@@ -77,10 +55,16 @@ async function startServer() {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
+}
 
+setupVite();
+
+// Export for Vercel
+export default app;
+
+// Only listen if running directly (not as a serverless function)
+if (process.env.NODE_ENV !== "production" || !process.env.VERCEL) {
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
 }
-
-startServer();
