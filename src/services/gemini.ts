@@ -1,33 +1,18 @@
 import { Type } from "@google/genai";
 
-async function callGenerate(contents: any, config?: any, model?: string) {
-  const response = await fetch("/api/generate", {
+async function callGeminiApi(action: string, payload: any) {
+  const response = await fetch("/api/gemini", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ contents, config, model }),
+    body: JSON.stringify({ action, payload }),
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to generate content");
+    const errorData = await response.json().catch(() => ({ error: "Unknown server error" }));
+    throw new Error(errorData.error || `Server error: ${response.status}`);
   }
 
-  return await response.json();
-}
-
-async function callEmbed(contents: any, model?: string) {
-  const response = await fetch("/api/embed", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ contents, model }),
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to generate embedding");
-  }
-
-  return await response.json();
+  return response.json();
 }
 
 export interface StructuredNote {
@@ -56,7 +41,10 @@ export interface WeeklyReport {
 }
 
 export async function getEmbedding(text: string): Promise<number[]> {
-  const result = await callEmbed([text]);
+  const result = await callGeminiApi('embedContent', {
+    model: 'gemini-embedding-2-preview',
+    contents: [text],
+  });
   return result.embeddings[0].values;
 }
 
@@ -68,11 +56,12 @@ export function cosineSimilarity(vecA: number[], vecB: number[]): number {
 }
 
 export async function structureNote(content: string): Promise<StructuredNote> {
-  const response = await callGenerate(
-    `Structure the following micro-reading note or snippet into a clear format. 
+  const response = await callGeminiApi('generateContent', {
+    model: "gemini-3-flash-preview",
+    contents: `Structure the following micro-reading note or snippet into a clear format. 
     Also, perform a "typo cleanup" on the content to fix any obvious spelling or grammar issues while preserving the original meaning.
     Content: "${content}"`,
-    {
+    config: {
       responseMimeType: "application/json",
       responseSchema: {
         type: Type.OBJECT,
@@ -87,17 +76,18 @@ export async function structureNote(content: string): Promise<StructuredNote> {
         required: ["summary", "tags", "keyPoints", "category", "actionItems", "cleanedContent"]
       }
     }
-  );
+  });
 
-  return JSON.parse(response.text || "{}");
+  return JSON.parse(response.candidates[0].content.parts[0].text || "{}");
 }
 
 export async function suggestMerge(noteA: string, noteB: string): Promise<MergeSuggestion> {
-  const response = await callGenerate(
-    `These two notes appear to be duplicates or very similar. Suggest a single merged version that captures the essence of both, and explain why they should be merged.
+  const response = await callGeminiApi('generateContent', {
+    model: "gemini-3-flash-preview",
+    contents: `These two notes appear to be duplicates or very similar. Suggest a single merged version that captures the essence of both, and explain why they should be merged.
     Note A: "${noteA}"
     Note B: "${noteB}"`,
-    {
+    config: {
       responseMimeType: "application/json",
       responseSchema: {
         type: Type.OBJECT,
@@ -108,35 +98,33 @@ export async function suggestMerge(noteA: string, noteB: string): Promise<MergeS
         required: ["mergedContent", "reason"]
       }
     }
-  );
-  return JSON.parse(response.text || "{}");
+  });
+  return JSON.parse(response.candidates[0].content.parts[0].text || "{}");
 }
 
 export async function askNotes(query: string, context: string[]): Promise<string> {
-  console.log("Asking notes with query:", query, "and context size:", context.length);
-  
-  const response = await callGenerate(
-    `Question: ${query}`,
-    {
+  const response = await callGeminiApi('generateContent', {
+    model: "gemini-3-flash-preview",
+    contents: `Question: ${query}`,
+    config: {
       systemInstruction: `You are a personal knowledge assistant. 
       Your task is to answer the user's question based ONLY on the provided notes from their knowledge base. 
       
       Knowledge Base Notes:
       ${context.map((n, i) => `[Note ${i + 1}]: ${n}`).join('\n\n')}`,
     }
-  );
+  });
   
-  const text = response.text;
-  console.log("Received response from Lumina:", text);
-  return text || "I couldn't find an answer in your notes.";
+  return response.candidates[0].content.parts[0].text || "I couldn't find an answer in your notes.";
 }
 
 export async function detectPattern(noteA: string, noteB: string): Promise<PatternInsight | null> {
-  const response = await callGenerate(
-    `Analyze these two related ideas and detect a deeper pattern or connection between them. If there is a clear connection, provide a title for the pattern and a brief description. If the connection is weak, return null.
+  const response = await callGeminiApi('generateContent', {
+    model: "gemini-3-flash-preview",
+    contents: `Analyze these two related ideas and detect a deeper pattern or connection between them. If there is a clear connection, provide a title for the pattern and a brief description. If the connection is weak, return null.
     Idea 1: "${noteA}"
     Idea 2: "${noteB}"`,
-    {
+    config: {
       responseMimeType: "application/json",
       responseSchema: {
         type: Type.OBJECT,
@@ -147,23 +135,24 @@ export async function detectPattern(noteA: string, noteB: string): Promise<Patte
         required: ["title", "description"]
       }
     }
-  );
+  });
   try {
-    return JSON.parse(response.text || "null");
+    return JSON.parse(response.candidates[0].content.parts[0].text || "null");
   } catch {
     return null;
   }
 }
 
 export async function generateWeeklyReport(notes: string[]): Promise<WeeklyReport> {
-  const response = await callGenerate(
-    `Analyze the following notes captured over the past week and generate a "Your weekly knowledge report".
+  const response = await callGeminiApi('generateContent', {
+    model: "gemini-3-flash-preview",
+    contents: `Analyze the following notes captured over the past week and generate a "Your weekly knowledge report".
     Identify the main topics explored and detect deeper patterns or recurring themes across the notes.
     
     Notes:
     ${notes.join('\n---\n')}
     `,
-    {
+    config: {
       responseMimeType: "application/json",
       responseSchema: {
         type: Type.OBJECT,
@@ -186,24 +175,25 @@ export async function generateWeeklyReport(notes: string[]): Promise<WeeklyRepor
         required: ["topics", "patterns", "summary"]
       }
     }
-  );
-  return JSON.parse(response.text || "{}");
+  });
+  return JSON.parse(response.candidates[0].content.parts[0].text || "{}");
 }
 
 export async function generateTopicInsight(topic: string, notes: string[]): Promise<string> {
-  const response = await callGenerate(
-    `Analyze these notes categorized under the topic "${topic}". 
+  const response = await callGeminiApi('generateContent', {
+    model: "gemini-3-flash-preview",
+    contents: `Analyze these notes categorized under the topic "${topic}". 
     Detect a recurring theme or core philosophy that connects them. 
     Provide a concise, insightful synthesis (1-2 sentences).
     
     Notes:
     ${notes.join('\n---\n')}
     `,
-    {
+    config: {
       systemInstruction: "You are a personal knowledge engine. Your goal is to provide deep, synthesized insights into a user's thinking patterns. Be profound but concise.",
     }
-  );
-  return response.text || "No specific theme detected yet.";
+  });
+  return response.candidates[0].content.parts[0].text || "No specific theme detected yet.";
 }
 
 export interface EvolutionInsight {
@@ -213,8 +203,9 @@ export interface EvolutionInsight {
 }
 
 export async function generateEvolutionInsight(notes: { content: string; date: string }[]): Promise<EvolutionInsight> {
-  const response = await callGenerate(
-    `Analyze how this idea has evolved over time based on these notes. 
+  const response = await callGeminiApi('generateContent', {
+    model: "gemini-3-flash-preview",
+    contents: `Analyze how this idea has evolved over time based on these notes. 
     Notes (ordered by date):
     ${notes.map(n => `[${n.date}]: ${n.content}`).join('\n---\n')}
     
@@ -223,7 +214,7 @@ export async function generateEvolutionInsight(notes: { content: string; date: s
     2. A brief explanation of how the thinking matured or shifted.
     3. A list of key milestones (summaries of the most important shifts).
     `,
-    {
+    config: {
       responseMimeType: "application/json",
       responseSchema: {
         type: Type.OBJECT,
@@ -245,6 +236,6 @@ export async function generateEvolutionInsight(notes: { content: string; date: s
         required: ["theme", "evolution", "milestones"]
       }
     }
-  );
-  return JSON.parse(response.text || "{}");
+  });
+  return JSON.parse(response.candidates[0].content.parts[0].text || "{}");
 }
