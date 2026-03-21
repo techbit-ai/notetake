@@ -1,18 +1,40 @@
 import { Type } from "@google/genai";
 
 async function callGeminiApi(action: string, payload: any) {
-  const response = await fetch("/api/gemini", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action, payload }),
-  });
+  try {
+    const response = await fetch("/api/gemini", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action, payload }),
+    });
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ error: "Unknown server error" }));
-    throw new Error(errorData.error || `Server error: ${response.status}`);
+    const contentType = response.headers.get("content-type");
+    const isJson = contentType && contentType.includes("application/json");
+
+    if (!response.ok) {
+      let errorMessage = `Server error: ${response.status}`;
+      if (isJson) {
+        const errorData = await response.json();
+        errorMessage = errorData.error || errorMessage;
+      } else {
+        const text = await response.text();
+        console.error("Non-JSON error response:", text);
+        errorMessage = `Server returned HTML instead of JSON. This usually means a route was not found or the server crashed. Status: ${response.status}`;
+      }
+      throw new Error(errorMessage);
+    }
+
+    if (!isJson) {
+      const text = await response.text();
+      console.error("Expected JSON but got:", text);
+      throw new Error("Server returned non-JSON response. Check server logs.");
+    }
+
+    return response.json();
+  } catch (error: any) {
+    console.error("Gemini API Call failed:", error);
+    throw error;
   }
-
-  return response.json();
 }
 
 export interface StructuredNote {

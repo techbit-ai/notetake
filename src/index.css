@@ -7,11 +7,11 @@
   --font-serif: "Cormorant Garamond", serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 
-  --color-lumina-bg: var(--bg);
-  --color-lumina-surface: var(--surface);
-  --color-lumina-text: var(--text);
-  --color-lumina-accent: var(--accent);
-  --color-lumina-border: var(--border);
+  --color-luminia-bg: var(--bg);
+  --color-luminia-surface: var(--surface);
+  --color-luminia-text: var(--text);
+  --color-luminia-accent: var(--accent);
+  --color-luminia-border: var(--border);
 
   @keyframes shimmer {
     from { transform: translateX(-100%); }
@@ -42,7 +42,7 @@
 
 @layer base {
   body {
-    @apply antialiased text-lumina-text bg-lumina-bg transition-colors duration-300;
+    @apply antialiased text-luminia-text bg-luminia-bg transition-colors duration-300;
   }
 }
 

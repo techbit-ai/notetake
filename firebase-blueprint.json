@@ -1,67 +1,46 @@
 {
   "entities": {
-    "Note": {
-      "title": "Note",
-      "description": "A micro-reading snippet with AI-structured metadata.",
-      "type": "object",
-      "properties": {
-        "content": {
-          "type": "string",
-          "description": "The original text snippet or note."
-        },
-        "structuredData": {
-          "type": "object",
-          "description": "AI-generated structure (tags, summary, action items)."
-        },
-        "userId": {
-          "type": "string",
-          "description": "The ID of the user who created the note."
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Timestamp of creation."
-        },
-        "source": {
-          "type": "string",
-          "description": "Optional source URL or book title."
-        },
-        "embedding": {
-          "type": "array",
-          "items": { "type": "number" },
-          "description": "Vector embedding for semantic search."
-        }
-      },
-      "required": ["content", "userId", "createdAt"]
-    },
     "User": {
       "title": "User",
-      "description": "User profile and preferences.",
+      "description": "User profile and settings.",
       "type": "object",
       "properties": {
-        "email": {
-          "type": "string",
-          "format": "email"
-        },
-        "displayName": {
-          "type": "string"
-        },
-        "role": {
-          "type": "string",
-          "enum": ["user", "admin"]
-        }
+        "uid": { "type": "string", "description": "The user's unique ID." },
+        "displayName": { "type": "string", "description": "The user's display name." },
+        "email": { "type": "string", "format": "email", "description": "The user's email address." },
+        "photoURL": { "type": "string", "description": "The user's profile photo URL." },
+        "role": { "type": "string", "enum": ["user", "admin"], "description": "The user's role." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "When the user account was created." }
       },
-      "required": ["email"]
+      "required": ["uid", "email"]
+    },
+    "Note": {
+      "title": "Note",
+      "description": "A knowledge snippet or idea captured by the user.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "The note's unique ID." },
+        "userId": { "type": "string", "description": "The user who owns the note." },
+        "content": { "type": "string", "description": "The raw text content of the note." },
+        "structuredData": {
+          "type": "object",
+          "properties": {
+            "summary": { "type": "string" },
+            "tags": { "type": "array", "items": { "type": "string" } },
+            "keyPoints": { "type": "array", "items": { "type": "string" } },
+            "category": { "type": "string" },
+            "actionItems": { "type": "array", "items": { "type": "string" } },
+            "cleanedContent": { "type": "string" }
+          }
+        },
+        "embedding": { "type": "array", "items": { "type": "number" }, "description": "Vector embedding for semantic search." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "When the note was created." }
+      },
+      "required": ["id", "userId", "content", "createdAt"]
     }
   },
   "firestore": {
-    "/notes/{noteId}": {
-      "schema": "Note",
-      "description": "Collection of user notes."
-    },
-    "/users/{userId}": {
-      "schema": "User",
-      "description": "User profiles."
-    }
+    "/users/{userId}": { "schema": "User", "description": "User profile documents." },
+    "/notes/{noteId}": { "schema": "Note", "description": "Knowledge notes collection." }
   }
 }
